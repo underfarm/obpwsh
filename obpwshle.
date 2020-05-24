@@ -1,0 +1,60 @@
+
+
+
+
+(let* ((proc (get-buffer-process (get-buffer "*terminal*")))
+       (sendString "ls \n")
+       )
+  (term-send-string proc sendString)
+  (process-filter proc)
+  )
+
+
+term-get-old-input
+
+
+PS /home/ufarmen/repos/powershell.el>
+
+(defun searchmeup ()
+  (interactive)
+  (re-search-forward powershell-prompt-regex nil t)
+  )
+
+(setq powershell-prompt-regex "PS [^#$%>]+>.+#!#")
+
+
+(defun org-babel-execute:pwsh (body params)
+  "Executes a Powershell code block."
+  ;; Round up the stuff we need
+  (let* ((parsed-params (ob-pwsh--parse-params params))
+         (expanded-body (org-babel-expand-body:pwsh body params))
+         (result-type (nth 0 parsed-params))
+         (vars (nth 1 parsed-params)))
+    (message (format "===vars %s" vars))
+    ;; Build script in temporary file
+    (testterm expanded-body)
+    ))
+
+
+(defun testterm (toSend)
+  (interactive)
+  (with-current-buffer "*terminal*"
+    (comint-clear-buffer)
+    (let* ((prevpoint (point))
+           (sendString (concat toSend "\n #!#"))
+           (proc (get-buffer-process (get-buffer "*terminal*"))))
+      (with-current-buffer "log"
+        (insert sendString)
+        (insert "\n"))
+      (term-send-string proc sendString)
+      (goto-char prevpoint)
+
+      (if (eq nil (re-search-forward powershell-prompt-regex nil t))
+          (sleep-for 1))
+
+      (setq wtf (buffer-substring-no-properties prevpoint (point-max) )))
+    ;; (goto-char (- 1 (point-max)))
+    (comint-clear-buffer)
+    (goto-char (- 1 (point-max)))
+    wtf)
+  )
